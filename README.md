@@ -1,11 +1,56 @@
-# esg-llm
+# ESG LLM Data Entry Analyst Module (esg-llm)
 
-
-## ESG LLM Data Entry Analyst
 
 ### Goals
 A module that uses an LLM to fill out forms from unstructured text data for ESG reporting.
 As well as providing contextualized comments where necessary on additional information that may be relevant.
+
+
+The Issue is that GPT is deaf, blind, and cannot read very well either.
+With extensive prompt engineer, input parsing, and output parsing we are confident that we can change this.
+Mozart ETL Data Extraction gives LLMs the eyes they need to see by breaking down the page components into purely readable format, now we must make them read good and respond good :)
+
+### Requirements
+* must have data type parsing and sanity checking across many target units
+* must use A Replaceable LLM Call Under the Hood
+  * Azure OpenAi gpt-35-turbo (For Now) https://api.python.langchain.com/en/latest/chat_models/langchain.chat_models.azure_openai.AzureChatOpenAI.html
+  * Completely replaceable with any Remote Call with `system` prompt, and `user / task` prompt
+  * Traceable Calls using LangSmith, Phoenix LLM Tracing, or Weights and Bias LLM Tracing (Or Some other Local Implementation of Tracking I/O)
+
+
+```python
+from usemozart.llm import ESG_LLM_Analyst
+
+
+### Example Usage ###
+
+# Client Agency Methodology Text (Optional):
+#   - Can be summarized / augmented into a system_prompt
+#   - Can be augmented into guardrails (https://github.com/NVIDIA/NeMo-Guardrails)
+# eg: https://www.fitchratings.com/search?filter.sector=Corporate%20Finance&filter.language=English&filter.reportType=Rating%20Criteria&sort=recency)
+
+Analyst = ESG_LLM_Analyst(Methodology="...") 
+
+response = Analyst.invoke(
+    Field_Name="...",
+    Field_Description="...",
+    Collection_Instructions="...",
+    Target_Unit="...",
+    Sources=[
+        {
+            "Source_Name_Filename": "...",
+            "Page_Number": 0,
+            "LLM_Layout": "..."
+        }
+    ]
+)
+
+
+```
+
+
+***
+
 
 ### Input Data
 
@@ -70,8 +115,7 @@ By engaging directly with suppliers from a diverse backgrounds we make sure to s
   }, ...
 ]
 ```
-
-
+***
 
 ### Output Data
 
@@ -96,3 +140,5 @@ By engaging directly with suppliers from a diverse backgrounds we make sure to s
   ]
 }
 ```
+
+***
