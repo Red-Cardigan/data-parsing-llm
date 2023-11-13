@@ -146,4 +146,6 @@ By engaging directly with suppliers from a diverse backgrounds we make sure to s
 ***
 
 ### Resources
+* [Output Parsers] https://python.langchain.com/docs/modules/model_io/output_parsers/
+* [LangSmith] https://python.langchain.com/docs/langsmith/walkthrough
 * 
