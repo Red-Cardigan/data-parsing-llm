@@ -2,6 +2,8 @@
 
 
 ### Goals
+`Formatted Question Answering`
+
 A module that uses an LLM to fill out forms from unstructured text data for ESG reporting.
 As well as providing contextualized comments where necessary on additional information that may be relevant.
 
@@ -142,3 +144,6 @@ By engaging directly with suppliers from a diverse backgrounds we make sure to s
 ```
 
 ***
+
+### Resources
+* 
