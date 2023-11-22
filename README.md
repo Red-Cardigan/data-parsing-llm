@@ -10,7 +10,7 @@ As well as providing contextualized comments where necessary on additional infor
 
 The Issue is that GPT is deaf, blind, and cannot read very well either.
 With extensive prompt engineer, input parsing, and output parsing we are confident that we can change this.
-Mozart ETL Data Extraction gives LLMs the eyes they need to see by breaking down the page components into purely readable format, now we must make them read good and respond good :)
+Mozart ETL Data Extraction gives LLMs the eyes they need to see by breaking down the page components into purely readable format, now we must make them read good and respond good :D
 
 ### Requirements
 * must have data type parsing and sanity checking across many target units
@@ -23,29 +23,42 @@ Mozart ETL Data Extraction gives LLMs the eyes they need to see by breaking down
 ```python
 from usemozart.llm import ESG_LLM_Analyst
 
+The module expects a list of JSON dictionaries with field-name, description, and llm (text to be analysed)
+- any other fields are ignored
 
-### Example Usage ###
+#Here's the structure template:
+
+input = process_input([{ 
+    'field-name':"name of the field",
+    'description':"description of the field - should contain an indication of the target unit",
+    "llm": "pass the the context in as text"
+}])
+
+# Here's a sample input:
+
+input = process_input([{ 
+    'field-name':'diverse_csuite', 
+    'description': 'C-suite individuals over 50 in DEI prog', 
+    'llm':tesla
+}])
+
+#The ouput returns the answer, unit, and questions asked:
+
+items = {'diverse_csuite': 
+    {
+      'field_name': 'diverse_csuite', 'generated_questions': "1. What is the percentage of C-suite individuals over 50 in the company's diversity, equity, and inclusion (DEI) program?\n2. How does the company define its C-suite positions?\n3. Are there any specific targets or goals set by the company regarding the representation of individuals over 50 in its C-suite?\n4. What initiatives or programs does the company have in place to promote diversity and inclusion in its C-suite, particularly for individuals over 50?\n5. Are there any policies or practices in the company that may hinder or support the representation of individuals over 50 in its C-suite?\n6. Has the company made any public commitments or statements regarding the importance of age diversity in its C-suite?\n7. Are there any notable case studies or success stories of individuals over 50 who have held C-suite positions within the company?\n8. How does the company compare to industry peers in terms of the percentage of C-suite individuals over 50 in their DEI programs?\n9. Are there any external benchmarks or standards that the company uses to assess its progress in promoting age diversity in its C-suite?\n10. What metrics or data does the company track to measure the representation of individuals over 50 in its C-suite within", 'relevant_context': "- The percentage of C-suite individuals over 50 in the company's DEI program is 72.4%.\n- The company defines its C-suite positions as senior leadership roles within the organization.\n- There is no specific mention of targets or goals regarding the representation of individuals over 50 in the C-suite.\n- The company does not provide specific information about initiatives or programs to promote diversity and inclusion in the C-suite for individuals over 50.\n- There is no information provided about policies or practices that may hinder or support the representation of individuals over 50 in the C-suite.\n- There is no mention of any public commitments or statements regarding the importance of age diversity in the C-suite.\n- There is no information provided about notable case studies or success stories of individuals over 50 in C-suite positions.\n- There is no comparison provided to industry peers in terms of the percentage of C-suite individuals over 50 in their DEI programs.\n- There is no mention of external benchmarks or standards used by the company to assess progress in promoting age diversity in the C-suite.\n- There is no information provided about specific metrics or data tracked by the company to measure the representation of individuals over 50 in the C-suite.", 
+      'unit': '%', 
+      'validation': '\\b\\d*\\.?\\d+\\b', 
+      'output': {'value': '72.4'}
+    }
+  }
+
+### Example Usage in test_script.py###
 
 # Client Agency Methodology Text (Optional):
 #   - Can be summarized / augmented into a system_prompt
 #   - Can be augmented into guardrails (https://github.com/NVIDIA/NeMo-Guardrails)
 # eg: https://www.fitchratings.com/search?filter.sector=Corporate%20Finance&filter.language=English&filter.reportType=Rating%20Criteria&sort=recency)
-
-Analyst = ESG_LLM_Analyst(Methodology="...") 
-
-response = Analyst.invoke(
-    Field_Name="...",
-    Field_Description="...",
-    Collection_Instructions="...",
-    Target_Unit="...",
-    Sources=[
-        {
-            "Source_Name_Filename": "...",
-            "Page_Number": 0,
-            "LLM_Layout": "..."
-        }
-    ]
-)
 
 
 ```
