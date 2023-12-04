@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 import re
-from .openai_utils import phrase_prompt
+from .llm_utils import phrase_prompt
 from string import Template
 import os
 from dotenv import load_dotenv
@@ -10,6 +10,9 @@ import json
 import openai
 from langchain.chat_models import ChatOpenAI
 from langchain.llms import OpenAI
+# from app import MozartMistral
+from .templates import unit_template, questions_template, search_template, meta_template, meta_template_string
+from esg_llm.llm_utils import find_answer
 
 load_dotenv(dotenv_path='./.env')
 OPENAI_API_KEY=os.getenv('OPENAI_API_KEY')
@@ -31,113 +34,7 @@ OPENAI_API_KEY=os.getenv('OPENAI_API_KEY')
 #     {'field-name':'dynamics_measures', 'description':'measures to improve workforce dynamics', 'llm':tesla, 'instruction':str, 'target-unit':'int'}
 # ]
 
-# - Needs GPT-4 to get concise strings as responses. Presumably will apply to generative answers when we do these
 # - Applying regex validation rather than a manager prompt works consistently for int and float.
-
-unit_template = Template("""
-    Determine the most appropriate data type for storing a given data point.
-
-    Parameters:
-    field_name (str): The name of the field.
-    description (str): The description of the data to be stored in the field.
-
-    Returns:
-    str: A template string with the recommended data type for the field.
-                         
-    Data:
-    field_name: $field_name
-    description: $description
-    """)
-                         
-                        #  Find the most appropriate unit to store the data point described below.\
-                        #  For example, int, %, year, str etc.\nfield name: $field_name\nfield description: $description\
-                        #  \n return your answer as 'unit:<>'")
-
-questions_template = Template("""
-    Generate questions to help an ESG analyst find information matching the description in a corpus of documents.
-
-    Parameters:
-    field_name (str): The name of the field.
-    description (str): The description of the information to be found.
-
-    Returns:
-    str: A list of questions formatted as a string to guide the ESG analyst.
-                              
-    Data:
-    field_name: $field_name
-    description: $description         
-    """)
-    
-    # "Provide questions to help a trainee ESG analyst find information which matches the description in\
-    #                            a corpus of documents.\nfield name: $field_name\ndescription: $description\nphrase your answer as a\
-    #                            list of questions'")
-
-search_template = Template("""
-    Use the provided questions and description to extract relevant information from a given context.
-
-    Parameters:
-    questions (str): The questions to guide the search.
-    description (str): The description of the information sought.
-    context (str): The context or corpus from which the information is to be extracted.
-
-    Returns:
-    str: A string with relevant information extracted from the context, formatted as bullet points.
-                           
-    Data:
-    questions: $questions
-    description: $description
-    context: $context
-    """)
-    
-    # "Use these questions and description to return relevant information from the context below. \
-    #                        Return only relevant information in bullet points.\nQuestions: $questions\ndescription: $description\
-    #                        \nContext: $context")
-
-meta_template = Template("""
-    Use the provided context to find a value that matches the description in a specified unit.
-
-    Parameters:
-    target_unit (str): The unit in which the matching value is to be found.
-    field_name (str): The name of the field.
-    description (str): The description of the information sought.
-    context (str): The context or corpus from which the information is to be extracted.
-
-    Returns:
-    str: A string representing the final answer in the specified target unit.
-
-    Data:
-    target_unit: $target_unit
-    field_name: $field_name
-    description: $description
-    context: $context
-    """)
-    
-    # "Use the context below to find a $target_unit which matches the description\nfield name: $field_name\
-    #                      \ndescription: $description\ncontext: $context\nunit: $target_unit\n return your answer as 'final answer:<>'")
-
-meta_template_string = Template("""
-    Use the provided context to find a value that matches the description in a specified unit.
-
-    Parameters:
-    target_unit (str): The unit in which the matching value is to be found.
-    field_name (str): The name of the field.
-    description (str): The description of the information sought.
-    context (str): The context or corpus from which the information is to be extracted.
-
-    Returns:
-    str: A string representing the final answer in the specified target unit.
-
-    Data:
-    target_unit: $target_unit
-    field_name: $field_name
-    description: $description
-    context: $context
-    """)
-    
-    # "Use the information provided to return an which matches the description in $target_unit.\n\
-    #                             field name: $field_name\ndescription: $description\ncontext: $context\nunit: $target_unit\n\
-    #                             return your answer as 'final answer:<>'")
-
 
 def create_json_schema(inputs: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
@@ -167,6 +64,10 @@ def create_json_schema(inputs: List[Dict[str, Any]]) -> Dict[str, Any]:
         context = item["llm"]
         filled_questions_template = questions_template.substitute(description = description, field_name = field_name) 
         target_unit_raw = unit_template.substitute(description = description, field_name = field_name)
+        model = "gpt4" #or azure, mozart, gpt3.5
+        # - process_json_schema() needs GPT-4 to get concise strings as responses. 
+        # Presumably this will apply to generative answers when we do these
+
 
         ## Construct the generative/extractive prompts separately (we may want this later)
         #Generative
@@ -176,8 +77,9 @@ def create_json_schema(inputs: List[Dict[str, Any]]) -> Dict[str, Any]:
         # elif target_unit == "str":    
         #     filled_questions_template = questions_template.substitute(description = description)
 
+
         # Generate questions to ask based on the description using GPT-3
-        generated_questions = phrase_prompt(filled_questions_template, OPENAI_API_KEY, max_tokens=250)
+        generated_questions = phrase_prompt(model, filled_questions_template, OPENAI_API_KEY, max_tokens=250)
         #Find relevant content in the input based on generated questions
         retrieved_context = search_template.substitute(questions = generated_questions, description = description, context = context)
         #Find a good target unit with GPT-3
@@ -214,33 +116,34 @@ def process_json_schema(inputs: List[Dict[str, Any]], json_data: Dict[str, Any])
     for item in inputs:
             field_name = item["field-name"]
             unit_info = json_data["items"][field_name]
-            
-            if unit_info['unit'] == "str":
-                model = ChatOpenAI(model_name="gpt-4", max_tokens=50)
-            else:
-                model = OpenAI(max_tokens=30)
             target_unit = unit_info['unit']
             validation = unit_info['validation']
             relevant_context = unit_info['relevant_context']
             # prompt = unit_info['filled_prompt_template']
             # search_findings = phrase_prompt(prompt, OPENAI_API_KEY)
-            if target_unit == 'str':
-                final_answer_raw = model.invoke(meta_template_string.substitute(field_name=field_name, description=item['description'], context=relevant_context, target_unit=target_unit))
-            else:
-                final_answer_raw = model.invoke(meta_template.substitute(field_name=field_name, description=item['description'], context=relevant_context, target_unit=target_unit))
-            # print(final_answer_raw)
-            final_answer = re.findall(r'answer:\s*([^.]+)', str(final_answer_raw))
+            json_data = find_answer(target_unit, field_name, item, relevant_context, validation, json_data)
 
-            # Validate and extract the relevant information
-            if final_answer and validation != '5w_or_less':
-                #If string/ generative answer
-                match = re.search(validation, final_answer[0])
-                json_data["items"][field_name]["output"]["value"] = match.group() if match else "No answer in context"
-            elif final_answer:
-                #Most (extractive) answers
-                json_data["items"][field_name]["output"]["value"] = final_answer
-            else:
-                json_data["items"][field_name]["output"]["value"] = "No answer in context"
+            # if target_unit == 'str':
+            #     model = "gpt4"
+            #     final_answer_raw = model.invoke(meta_template_string.substitute(field_name=field_name, description=item['description'], context=relevant_context, target_unit=target_unit))
+            # else:
+            #     model = MozartMistral()
+            #     # previous: gpt3
+            #     # model = OpenAI(max_tokens=30), 
+            #     final_answer_raw = model.invoke(meta_template.substitute(field_name=field_name, description=item['description'], context=relevant_context, target_unit=target_unit))
+            # # print(final_answer_raw)
+            # final_answer = re.findall(r'answer:\s*([^.]+)', str(final_answer_raw))
+
+            # # Validate and extract the relevant information
+            # if final_answer and validation != '5w_or_less':
+            #     #If string/ generative answer
+            #     match = re.search(validation, final_answer[0])
+            #     json_data["items"][field_name]["output"]["value"] = match.group() if match else "No answer in context"
+            # elif final_answer:
+            #     #Most answers are extractive and can be done with MozartMistral (prev: gpt3)
+            #     json_data["items"][field_name]["output"]["value"] = final_answer
+            # else:
+            #     json_data["items"][field_name]["output"]["value"] = "No answer in context"
 
     return json_data
 

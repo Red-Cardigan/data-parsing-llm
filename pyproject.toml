@@ -10,10 +10,24 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.9"
-jupyter = "^1.0.0"
+ninja = "*"
+psutil = "*"
+ray = ">=2.5.1"
+pandas = "*"
+pyarrow = "*"
+sentencepiece = "*"
+numpy = "*"
+einops = "*"
+transformers = ">=4.34.0"
+fastapi = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+pydantic = "1.10.13"
+aioprometheus = {extras = ["starlette"], version = "*"}
 python-dotenv = "*"
 openai = "^1.3.4"
-langchain = "*"
+abc123abc = "^0.0.0"
+modal = "^0.55.4155"
+langchain = "^0.0.345"
 
 [build-system]
 requires = ["poetry-core"]
