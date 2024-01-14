@@ -9,10 +9,10 @@ from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from modal import Image, Secret, Stub, method, web_endpoint
 # from sentence_transformers import SentenceTransformer
 
 # Local application/library specific imports
-from modal import Image, Secret, Stub, method, web_endpoint
 # from langchain.chat_models.base import ChatOpenAI
 # from langchain.chat_models.base import SimpleChatModel
 # from langchain.schema import BaseMessage, ChatResult, AIMessage, ChatGeneration
@@ -51,6 +51,10 @@ image = (
         secret=Secret.from_name("mozart-secret"),
         timeout=60 * 20,
     )
+    from langchain.chat_models.base import ChatOpenAI
+    from langchain.chat_models.base import SimpleChatModel
+    from langchain.schema import BaseMessage, ChatResult, AIMessage, ChatGeneration
+    from langchain.callbacks import StdOutCallbackHandler
 )
 
 # Initialize stub and auth scheme
